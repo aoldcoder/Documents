@@ -1,0 +1,48 @@
+MTK集成油讯飞TTS是不能预装到system/app中。预装到system中so加载失败。必须安装到data/app目录中
+--- a/frameworks/base/services/core/java/com/android/server/pm/PackageManagerService.java
++++ b/frameworks/base/services/core/java/com/android/server/pm/PackageManagerService.java
+@@ -11668,11 +11668,13 @@ public class PackageManagerService extends IPackageManager.Stub
+                                     + " but expected at " + known.codePathString
+                                     + "; ignoring.");
+                         }
+-                    } else {
++                    } 
++                    //add cxq
++                    /*else {
+                         throw new PackageManagerException(INSTALL_FAILED_INVALID_INSTALL_LOCATION,
+                                 "Application package " + pkg.packageName
+                                 + " not found; ignoring.");
+-                    }
++                    }*/
+                 }
+             }
+             
+             
+--- a/vendor/mediatek/proprietary/packages/3rd-party/xunfei/Android.mk
++++ b/vendor/mediatek/proprietary/packages/3rd-party/xunfei/Android.mk
+@@ -5,15 +5,18 @@ LOCAL_MODULE := xftts
+ LOCAL_MODULE_TAGS := optional
+ LOCAL_SRC_FILES := xunfei3.0.apk
+ LOCAL_MODULE_CLASS := APPS
+-# LOCAL_MODULE_SUFFIX := $(COMMON_ANDROID_PACKAGE_SUFFIX)
++LOCAL_MODULE_SUFFIX := $(COMMON_ANDROID_PACKAGE_SUFFIX)
+ LOCAL_CERTIFICATE := PRESIGNED
+ LOCAL_PRIVILEGED_MODULE := false
+ LOCAL_DEX_PREOPT := false
+-LOCAL_SRC_FILES_32 := lib/armeabi/libem_aitalk5.so \
+-                                               lib/armeabi/libem_ivp2.so\
+-                                               lib/armeabi/libem_ivw3.so\
+-                                               lib/armeabi/libspeechmsc.so\
+-                                               lib/armeabi/libttsaisound.so\
+-                                               lib/armeabi/libvadLib.so
++
++LOCAL_MODULE_PATH := $(TARGET_OUT_DATA_APPS)
++
++LOCAL_PREBUILT_JNI_LIBS  := @lib/armeabi/libem_aitalk5.so \
++                                               @lib/armeabi/libem_ivp2.so\
++                                               @lib/armeabi/libem_ivw3.so\
++                                               @lib/armeabi/libspeechmsc.so\
++                                               @lib/armeabi/libttsaisound.so\
++                                               @lib/armeabi/libvadLib.so
+                                                
+ include $(BUILD_PREBUILT)             
