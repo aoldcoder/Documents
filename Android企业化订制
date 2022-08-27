@@ -1,0 +1,62 @@
+4. Android系统企业级定制
+
+在做Android产品开发的过程中，经常会有客户说：“我们不想让我们的产品开机后看到Android系统的桌面，我们希望设备开机会直接进入我们自己的程序“。“我们的产品就是直接面对最终用户的，其它的无关的功能不需要。”比如说，之前我们开发的一款社区医疗软件，通过蓝牙和心电仪、血糖仪等采集外设通信，客户要求开机进入医疗软件，通过底层蓝牙通信，我们采用的就是定制的Android平板的桌面。
+
+通常定制应用程序开机启动有两种实现方式：
+
+Ø  接收系统启动广播：BOOT_COMPLETED，在广播接收器代码里实现应用程序的启动。
+
+Ø  编写一个桌面程序，替换掉系统默认的Launcher应用。
+
+第一种方式实现简单，但是这个应用程序是在Android系统桌面出现之后再启动的，不是真正意义上的产品定制，并且，如果当前的应用程序崩溃了退出后，会回到桌面上，当然我们可以实现崩溃后再次重新启动，但是，这终究不是真正意义上的定制。
+
+第二种实现方式思路：当系统启动完毕之后，系统会发出一个Action为android.intent.action.MAIN，category为android.intent.category.HOME的Intent，默认系统的Launcher桌面会响应这个Intent，那么，我们可以编写一个应用程序，让它去响应这个Intent，然后我们将这个应用程序替换掉系统默认的Launcher桌面。系统重新启动之后，会自动启动我们自己的应用。但是，如果一些非法程序也响应这个Intent，那么照样不能达到客户的目的。这个时候，我们就要去修改系统框架代码，让Android系统启动完毕之后发送我们自己定义的Intent而不是公开的category为HOME的 Intent。
+
+思路如下：
+
+Ø  添加一个新的category：android.intent.category.FS_HOME
+
+Ø  将框架里面所有发送android.intent.category.HOME的Intent全部改成android.intent.category.FS_HOME
+
+category的定义文件在：
+
+@ frameworks/base/core/java/android/content/Intent.java
+
+2218     /**
+2219      * This is the home activity, that is the first activity that is displayed
+2220      * when the device boots.
+2221      */
+2222     @SdkConstant(SdkConstantType.INTENT_CATEGORY)
+2223     public static final String CATEGORY_HOME = "android.intent.category.HOME";
+在CATEGORY_HOME后面添加下面两行代码：
+
+2224     @SdkConstant(SdkConstantType.INTENT_CATEGORY)
+2225     public static final String CATEGORY_FS_HOME = "android.intent.category.FS_HOME";
+通过grep CATEGORY_HOME frameworks/ -R命令查找所有使用CATEGORY_HOME的文件：
+
+./frameworks/ex/carousel/test/src/com/android/carouseltest/TaskSwitcherActivity.java
+./frameworks/base/services/java/com/android/server/am/ActivityManagerService.java
+./frameworks/base/services/java/com/android/server/am/ActivityRecord.java
+./frameworks/base/services/java/com/android/server/UiModeManagerService.java
+./frameworks/base/tests/StatusBar/src/com/android/statusbartest/NotificationTestList.java
+./frameworks/base/policy/src/com/android/internal/policy/impl/PhoneWindowManager.java
+./frameworks/base/policy/src/com/android/internal/policy/impl/RecentApplicationsDialog.java
+./frameworks/base/packages/SystemUI/src/com/android/systemui/recent/RecentTasksLoader.java
+将文件里使用CATEGORY_HOME常量的地方全部改为CATEGORY_FS_HOME。
+
+新建一个Android应用：MyLauncher，在其AndroidManifest.xml里，<intent-filter>标签里添加上响应CATEGORY_FS_HOME的代码：
+
+<activity android:name=".MyLauncherActivity">
+        <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.FS_HOME" />
+                   <category android:name="android.intent.category.DEFAULT" />
+        </intent-filter>
+</activity>
+重新编译frameworks/base、frameworks/ex：
+
+$ source build/envsetup.sh
+$ make
+重新运行模拟器，使用新编译的Android系统，可以看到系统启动起来就进入我们的MyLauncher应用，从实现实现桌面的替换。
+
+ 
